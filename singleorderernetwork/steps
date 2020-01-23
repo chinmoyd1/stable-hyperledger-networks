@@ -1,0 +1,78 @@
+//Generate certificates using cryptogen tool
+    export FABRIC_CFG_PATH=$PWD
+    cryptogen generate --config=./crypto-config.yaml
+
+// Generating Orderer Genesis block for solo
+    configtxgen -profile TwoOrgsOrdererGenesis -channelID byfn-sys-channel -outputBlock ./channel-artifacts/genesis.block
+
+//Generating channel configuration transaction 'channel.tx'
+    configtxgen -profile TwoOrgsChannel -outputCreateChannelTx ./channel-artifacts/channel.tx -channelID mychannel
+
+//Generating anchor peer update for Org1MSP
+    configtxgen -profile TwoOrgsChannel -outputAnchorPeersUpdate ./channel-artifacts/Org1MSPanchors.tx -channelID mychannel -asOrg Org1MSP
+
+//Generating anchor peer update for Org2MSP
+    configtxgen -profile TwoOrgsChannel -outputAnchorPeersUpdate ./channel-artifacts/Org2MSPanchors.tx -channelID mychannel -asOrg Org2MSP
+
+
+//Replacename CA with keys
+
+//Run Container
+    export IMAGE_TAG=latest
+    docker-compose -f docker-compose-cli.yaml up
+
+//Enter cli
+    docker exec -it cli bash 
+
+//create channel
+    peer channel create -o orderer.example.com:7050 -c mychannel -f ./channel-artifacts/channel.tx
+
+//joinchannel (Sometimes Join takes time hence RETRY at least 5 times)
+    //setGlobals $PEER $ORG
+    export CORE_PEER_LOCALMSPID=Org1MSP
+    export CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt
+    export CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp
+    export CORE_PEER_ADDRESS=peer0.org1.example.com:7051
+
+    peer channel join -b mychannel.block
+
+    //setGlobals $PEER $ORG
+    export CORE_PEER_LOCALMSPID=Org1MSP
+    export CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org1.example.com/peers/peer1.org1.example.com/tls/ca.crt
+    export CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp
+    export CORE_PEER_ADDRESS=peer1.org1.example.com:8051
+
+    peer channel join -b mychannel.block
+
+    //setGlobals $PEER $ORG
+    export CORE_PEER_LOCALMSPID=Org2MSP
+    export CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt
+    export CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp
+    export CORE_PEER_ADDRESS=peer0.org2.example.com:9051
+
+    peer channel join -b mychannel.block
+
+    //setGlobals $PEER $ORG
+    export CORE_PEER_LOCALMSPID=Org2MSP
+    export CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org2.example.com/peers/peer1.org2.example.com/tls/ca.crt
+    export CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp
+    export CORE_PEER_ADDRESS=peer1.org2.example.com:10051
+
+    peer channel join -b mychannel.block
+
+//Update the anchor peers
+    //For anchor peer of Org1
+    export CORE_PEER_LOCALMSPID=Org1MSP
+    export CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt
+    export CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp
+    export CORE_PEER_ADDRESS=peer0.org1.example.com:7051
+    
+    peer channel update -o orderer.example.com:7050 -c mychannel -f ./channel-artifacts/Org1MSPanchors.tx
+
+    //For anchor peer of Org2
+    export CORE_PEER_LOCALMSPID=Org2MSP
+    export CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt
+    export CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp
+    export CORE_PEER_ADDRESS=peer0.org2.example.com:9051
+
+    peer channel update -o orderer.example.com:7050 -c mychannel -f ./channel-artifacts/Org2MSPanchors.tx
