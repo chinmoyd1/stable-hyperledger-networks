@@ -12,6 +12,6 @@
     "fabric-ca-client": "^1.4.5",
     "fabric-client": "^1.4.5",
     "fabric-network": "^1.4.5",
-    "log4js": "^6.1.0"
+    "log4js": "^6.4.0"
   }
 }
